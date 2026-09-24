@@ -106,12 +106,20 @@ def test_auto_classify_ids(root, db):
     assert files.get_file(db, f.id).category_id is not None
 
 
-def test_rect_intersects():
-    from app.ui.documents import _rect_intersects
-    # bbox (x=0, y=0, w=100, h=20)
-    assert _rect_intersects(0, 0, 100, 20, -10, -10, 10000, 10000) is True
-    assert _rect_intersects(0, 0, 100, 20, 200, 200, 300, 300) is False
-    # 部分重叠
-    assert _rect_intersects(0, 0, 100, 20, 50, -5, 150, 5) is True
-    # 矩形反向（从右下往左上拖）
-    assert _rect_intersects(0, 0, 100, 20, 10000, 10000, -10, -10) is True
+def test_select_range(root, db):
+    from app import files
+    files.add_file(db, "a.txt", "/a.txt")
+    files.add_file(db, "b.txt", "/b.txt")
+    files.add_file(db, "c.txt", "/c.txt")
+    view = DocumentsView(root, db)
+    view.refresh()
+    children = view.tree.get_children()
+    # 拖到最后一个 → 全选
+    view._select_range(children[0], children[2])
+    assert set(view.tree.selection()) == set(children)
+    # 拖到第二个 → 只选前两个
+    view._select_range(children[0], children[1])
+    assert set(view.tree.selection()) == {children[0], children[1]}
+    # 反向拖动等价
+    view._select_range(children[2], children[0])
+    assert set(view.tree.selection()) == set(children)

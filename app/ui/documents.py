@@ -6,12 +6,6 @@ from .. import categories, classifier, files, organizer
 from ..db import DEFAULT_ORGANIZE_DIR
 
 
-def _rect_intersects(bx, by, bw, bh, x0, y0, x1, y1):
-    xa, xb = sorted((x0, x1))
-    ya, yb = sorted((y0, y1))
-    return bx < xb and bx + bw > xa and by < yb and by + bh > ya
-
-
 class DocumentsView(ttk.Frame):
     def __init__(self, master, conn):
         super().__init__(master)
@@ -59,16 +53,12 @@ class DocumentsView(ttk.Frame):
         self.menu.add_separator()
         self.menu.add_command(label="删除", command=self.delete_selected)
 
-        # 左键框选覆盖层（画框线矩形）
-        try:
-            _bg = ttk.Style().lookup("Treeview", "fieldbackground") or "white"
-        except Exception:
-            _bg = "white"
-        self._rb_canvas = tk.Canvas(self, highlightthickness=0, bd=0, bg=_bg)
-        self._rb = {"start": None, "rect": None, "active": False}
-        self.tree.bind("<ButtonPress-1>", self._rb_press)
-        self.tree.bind("<B1-Motion>", self._rb_motion)
-        self.tree.bind("<ButtonRelease-1>", self._rb_release)
+        # 左键按住拖动多选
+        self._drag_active = False
+        self._drag_anchor = None
+        self.tree.bind("<ButtonPress-1>", self._drag_press)
+        self.tree.bind("<B1-Motion>", self._drag_motion)
+        self.tree.bind("<ButtonRelease-1>", self._drag_release)
 
     def set_category(self, category_id):
         self.category_id = category_id
@@ -160,46 +150,41 @@ class DocumentsView(ttk.Frame):
         if messagebox.askyesno("删除", f"确定删除 {len(ids)} 个文件的登记？\n（电脑里的真实文件不会被删除）"):
             self._delete_ids(ids)
 
-    # ---- 左键框选 ----
-    def _select_in_rect(self, x0, y0, x1, y1):
-        for iid in self.tree.get_children():
-            bbox = self.tree.bbox(iid)
-            if not bbox:
-                continue
-            bx, by, bw, bh = bbox
-            if _rect_intersects(bx, by, bw, bh, x0, y0, x1, y1):
-                self.tree.selection_add(iid)
-            else:
-                self.tree.selection_remove(iid)
-
-    def _rb_press(self, event):
-        if self.tree.identify_row(event.y) != "":
-            self._rb["active"] = False
-            return None  # 点在文件上，走默认单击选中
-        self._rb["active"] = True
-        self._rb["start"] = (event.x, event.y)
-        self._rb_canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        self._rb["rect"] = self._rb_canvas.create_rectangle(
-            event.x, event.y, event.x, event.y, outline="#1a73e8", dash=(2, 2))
+    # ---- 左键拖动多选 ----
+    def _select_range(self, start_iid, end_iid):
+        children = self.tree.get_children()
+        if start_iid not in children or end_iid not in children:
+            return
+        i0 = children.index(start_iid)
+        i1 = children.index(end_iid)
+        lo, hi = sorted((i0, i1))
         self.tree.selection_remove(*self.tree.selection())
+        for iid in children[lo:hi + 1]:
+            self.tree.selection_add(iid)
+
+    def _drag_press(self, event):
+        row = self.tree.identify_row(event.y)
+        if row == "":
+            self._drag_active = False
+            self.tree.selection_remove(*self.tree.selection())
+            return "break"
+        self._drag_active = True
+        self._drag_anchor = row
+        self.tree.selection_set(row)
         return "break"
 
-    def _rb_motion(self, event):
-        if not self._rb.get("active"):
+    def _drag_motion(self, event):
+        if not self._drag_active:
             return None
-        x0, y0 = self._rb["start"]
-        x1, y1 = event.x, event.y
-        self._rb_canvas.coords(self._rb["rect"], x0, y0, x1, y1)
-        self._select_in_rect(x0, y0, x1, y1)
+        row = self.tree.identify_row(event.y)
+        if row == "":
+            return "break"
+        self._select_range(self._drag_anchor, row)
         return "break"
 
-    def _rb_release(self, event):
-        if not self._rb.get("active"):
-            return None
-        self._rb["active"] = False
-        self._rb_canvas.delete("all")
-        self._rb_canvas.place_forget()
-        return "break"
+    def _drag_release(self, event):
+        self._drag_active = False
+        return None
 
     def import_files(self):
         paths = filedialog.askopenfilenames(title="选择要登记的文件")
