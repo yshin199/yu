@@ -104,3 +104,14 @@ def test_auto_classify_ids(root, db):
     assigned, unmatched = view._auto_classify_ids([f.id])
     assert assigned == 1 and unmatched == 0
     assert files.get_file(db, f.id).category_id is not None
+
+
+def test_rect_intersects():
+    from app.ui.documents import _rect_intersects
+    # bbox (x=0, y=0, w=100, h=20)
+    assert _rect_intersects(0, 0, 100, 20, -10, -10, 10000, 10000) is True
+    assert _rect_intersects(0, 0, 100, 20, 200, 200, 300, 300) is False
+    # 部分重叠
+    assert _rect_intersects(0, 0, 100, 20, 50, -5, 150, 5) is True
+    # 矩形反向（从右下往左上拖）
+    assert _rect_intersects(0, 0, 100, 20, 10000, 10000, -10, -10) is True

@@ -27,7 +27,7 @@ class App(ttk.Frame):
         ttk.Label(self.left, text="分类").pack(anchor="w", pady=(12, 0))
         self.cat_tree = ttk.Treeview(self.left, show="tree", height=12)
         self.cat_tree.pack(fill="x")
-        self.cat_tree.bind("<<TreeviewSelect>>", self._on_category_select)
+        self.cat_tree.bind("<ButtonRelease-1>", self._on_category_click)
 
         catbtns = ttk.Frame(self.left)
         catbtns.pack(fill="x", pady=4)
@@ -79,9 +79,19 @@ class App(ttk.Frame):
 
         add_nodes(categories.build_tree(self.conn))
 
-    def _on_category_select(self, event):
-        self.selected_category_id = self._selected_category_id()
-        self._refresh_current()
+    def _on_category_click(self, event):
+        iid = self.cat_tree.identify_row(event.y)
+        if not iid:
+            # 点到分类树空白处 → 取消过滤
+            self.clear_category_filter()
+            return
+        cid = self._selected_category_id()
+        if cid is not None and cid == self.selected_category_id:
+            # 再点一次已选中的分类 → 取消
+            self.clear_category_filter()
+        else:
+            self.selected_category_id = cid
+            self._refresh_current()
 
     def clear_category_filter(self):
         self.selected_category_id = None
