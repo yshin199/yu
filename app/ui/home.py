@@ -20,6 +20,10 @@ class HomeView(ttk.Frame):
         self.plan_entry.bind("<Return>", self._add_plan)
         self.plan_list = ttk.Frame(plan_frame)
         self.plan_list.pack(fill="both", expand=True)
+        ttk.Separator(plan_frame).pack(fill="x", pady=4)
+        ttk.Label(plan_frame, text="已完成").pack(anchor="w")
+        self.done_list = ttk.Frame(plan_frame)
+        self.done_list.pack(fill="both", expand=True)
 
         # 快速备忘
         quick_frame = ttk.LabelFrame(self, text="快速备忘", padding=6)
@@ -65,13 +69,23 @@ class HomeView(ttk.Frame):
         for w in self.plan_list.winfo_children():
             w.destroy()
         for m in plans:
-            var = tk.BooleanVar(value=m.done)
-            text = ("✓ " if m.done else "") + m.title
-            cb = ttk.Checkbutton(self.plan_list, text=text, variable=var,
+            var = tk.BooleanVar(value=False)
+            cb = ttk.Checkbutton(self.plan_list, text=m.title, variable=var,
                                  command=lambda mid=m.id: self._toggle_plan(mid))
             cb.pack(anchor="w")
         if not plans:
             ttk.Label(self.plan_list, text="今天还没有计划").pack(anchor="w")
+
+        done_plans = memos.get_today_plans(self.conn, today, done=True)
+        for w in self.done_list.winfo_children():
+            w.destroy()
+        for m in done_plans:
+            var = tk.BooleanVar(value=True)
+            cb = ttk.Checkbutton(self.done_list, text=m.title, variable=var,
+                                 command=lambda mid=m.id: self._toggle_plan(mid))
+            cb.pack(anchor="w")
+        if not done_plans:
+            ttk.Label(self.done_list, text="无").pack(anchor="w")
 
         for w in self.quick_list.winfo_children():
             w.destroy()

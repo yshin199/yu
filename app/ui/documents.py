@@ -10,6 +10,7 @@ class DocumentsView(ttk.Frame):
     def __init__(self, master, conn):
         super().__init__(master)
         self.conn = conn
+        self.category_id = None
         self._build()
 
     def _build(self):
@@ -41,6 +42,9 @@ class DocumentsView(ttk.Frame):
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<Double-1>", self.open_file)
 
+    def set_category(self, category_id):
+        self.category_id = category_id
+
     def refresh(self):
         cats = categories.list_categories(self.conn)
         self._cat_map = {c.name: c.id for c in cats}
@@ -49,7 +53,8 @@ class DocumentsView(ttk.Frame):
         q = self.search_var.get().strip() or None
         for item in self.tree.get_children():
             self.tree.delete(item)
-        for f in files.list_files(self.conn, query=q):
+        for f in files.list_files(self.conn, query=q, category_id=self.category_id,
+                                  include_descendants=True):
             cat_name = ""
             if f.category_id is not None:
                 c = categories.get_category(self.conn, f.category_id)
@@ -82,18 +87,33 @@ class DocumentsView(ttk.Frame):
         if not preview:
             messagebox.showinfo("自动分类", "没有可自动分类的未分类文件")
             return
-        lines = []
-        for p in preview[:30]:
+        by_id = {p["file_id"]: p["suggested_category_id"] for p in preview}
+        top = tk.Toplevel(self)
+        top.title("自动分类预览")
+        top.geometry("640x420")
+        top.transient(self.winfo_toplevel())
+        ttk.Label(top, text="勾选要归类的内容，点「确认归类」应用（默认全选）").pack(
+            anchor="w", padx=8, pady=4)
+        tv = ttk.Treeview(top, columns=("name", "cat"), show="headings", selectmode="extended")
+        tv.heading("name", text="文件")
+        tv.heading("cat", text="建议分类")
+        tv.column("name", width=400)
+        tv.column("cat", width=160)
+        tv.pack(fill="both", expand=True, padx=8, pady=4)
+        for p in preview:
             c = categories.get_category(self.conn, p["suggested_category_id"])
-            lines.append(f"{p['file_name']} → {c.name if c else '?'}")
-        more = f"\n…（共 {len(preview)} 个）" if len(preview) > 30 else ""
-        ok = messagebox.askyesno(
-            "自动分类预览",
-            "以下文件将被自动归类：\n" + "\n".join(lines) + more + "\n\n确认归类？")
-        if ok:
-            for p in preview:
-                files.set_file_category(self.conn, p["file_id"], p["suggested_category_id"])
+            iid = str(p["file_id"])
+            tv.insert("", "end", iid=iid, values=(p["file_name"], c.name if c else "?"))
+            tv.selection_add(iid)
+
+        def apply():
+            for iid in tv.selection():
+                fid = int(iid)
+                files.set_file_category(self.conn, fid, by_id[fid])
+            top.destroy()
             self.refresh()
+
+        ttk.Button(top, text="确认归类", command=apply).pack(pady=6)
 
     def assign_category(self):
         fid = self._selected_file_id()
