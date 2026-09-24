@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from .. import categories
+from .documents import DocumentsView
 from .home import HomeView
 
 
@@ -17,6 +18,7 @@ class App(ttk.Frame):
 
         ttk.Label(self.left, text="导航").pack(anchor="w")
         ttk.Button(self.left, text="首页", command=self.show_home).pack(fill="x", pady=2)
+        ttk.Button(self.left, text="文档管理", command=self.show_documents).pack(fill="x", pady=2)
 
         ttk.Label(self.left, text="分类").pack(anchor="w", pady=(12, 0))
         self.cat_tree = ttk.Treeview(self.left, show="tree", height=15)
@@ -28,6 +30,7 @@ class App(ttk.Frame):
         self.content.pack(side="left", fill="both", expand=True)
 
         self.home_view = HomeView(self.content, self.conn)
+        self.doc_view = DocumentsView(self.content, self.conn)
         self.current = None
         self.show_home()
 
@@ -43,6 +46,9 @@ class App(ttk.Frame):
 
     def show_home(self):
         self._switch(self.home_view)
+
+    def show_documents(self):
+        self._switch(self.doc_view)
 
     def _switch(self, view):
         if self.current is view:
