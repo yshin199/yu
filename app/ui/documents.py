@@ -29,6 +29,8 @@ class DocumentsView(ttk.Frame):
         self.cat_combo = ttk.Combobox(toolbar, state="readonly", width=12)
         self.cat_combo.pack(side="left")
         ttk.Button(toolbar, text="归类", command=self.assign_category).pack(side="left", padx=2)
+        self.filter_label = ttk.Label(toolbar, text="全部文件", foreground="#666")
+        self.filter_label.pack(side="left", padx=(12, 0))
 
         self.tree = ttk.Treeview(self, columns=("name", "type", "cat", "size"), show="headings")
         self.tree.heading("name", text="文件名")
@@ -49,6 +51,11 @@ class DocumentsView(ttk.Frame):
         cats = categories.list_categories(self.conn)
         self._cat_map = {c.name: c.id for c in cats}
         self.cat_combo["values"] = list(self._cat_map.keys())
+        if self.category_id is not None:
+            c = categories.get_category(self.conn, self.category_id)
+            self.filter_label.config(text=f"当前分类：{c.name if c else self.category_id}")
+        else:
+            self.filter_label.config(text="全部文件")
 
         q = self.search_var.get().strip() or None
         for item in self.tree.get_children():
@@ -68,18 +75,27 @@ class DocumentsView(ttk.Frame):
 
     def import_files(self):
         paths = filedialog.askopenfilenames(title="选择要登记的文件")
+        if not paths:
+            return
+        self._register_paths(paths)
+        messagebox.showinfo("登记", f"已登记 {len(paths)} 个文件")
+
+    def _register_paths(self, paths):
         for p in paths:
-            files.add_file(self.conn, os.path.basename(p), p)
+            files.add_file(self.conn, os.path.basename(p), p, category_id=self.category_id)
         self.refresh()
 
     def scan_folder(self):
         folder = filedialog.askdirectory(title="选择要扫描的文件夹")
         if not folder:
             return
+        collected = []
         for root, _, fnames in os.walk(folder):
             for fn in fnames:
-                files.add_file(self.conn, fn, os.path.join(root, fn))
-        self.refresh()
+                collected.append(os.path.join(root, fn))
+        if collected:
+            self._register_paths(collected)
+            messagebox.showinfo("扫描", f"已扫描登记 {len(collected)} 个文件")
 
     def auto_classify(self):
         preview = [p for p in classifier.preview_classification(self.conn)

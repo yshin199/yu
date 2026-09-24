@@ -35,6 +35,8 @@ class App(ttk.Frame):
         ttk.Button(catbtns, text="子分类", width=7, command=self.add_subcategory).pack(side="left")
         ttk.Button(catbtns, text="重命名", width=7, command=self.rename_category).pack(side="left")
         ttk.Button(catbtns, text="删除", width=5, command=self.delete_category).pack(side="left")
+        ttk.Button(catbtns, text="全部", width=5, command=self.clear_category_filter).pack(
+            side="left", padx=(4, 0))
 
         ttk.Separator(self.left).pack(fill="x", pady=8)
         ttk.Label(self.left, text="数据与备份", anchor="w").pack(anchor="w")
@@ -79,6 +81,11 @@ class App(ttk.Frame):
 
     def _on_category_select(self, event):
         self.selected_category_id = self._selected_category_id()
+        self._refresh_current()
+
+    def clear_category_filter(self):
+        self.selected_category_id = None
+        self.cat_tree.selection_remove(*self.cat_tree.selection())
         self._refresh_current()
 
     def _refresh_current(self):

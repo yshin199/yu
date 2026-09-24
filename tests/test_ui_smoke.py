@@ -59,3 +59,17 @@ def test_memos_view_filters_by_category(root, db):
     view.refresh()
     root.update()
     assert [int(i) for i in view.tree.get_children()] == [m1.id]
+
+
+def test_register_paths_into_selected_category(root, db, tmp_path):
+    from app import categories, files
+    cat = categories.add_category(db, "工作")
+    view = DocumentsView(root, db)
+    view.set_category(cat.id)
+    p = tmp_path / "a.txt"
+    p.write_bytes(b"x")
+    view._register_paths([str(p)])
+    root.update()
+    ids = [int(i) for i in view.tree.get_children()]
+    assert len(ids) == 1
+    assert files.get_file(db, ids[0]).category_id == cat.id
