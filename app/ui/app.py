@@ -4,6 +4,7 @@ from tkinter import ttk
 from .. import categories
 from .documents import DocumentsView
 from .home import HomeView
+from .memos_view import MemosView
 
 
 class App(ttk.Frame):
@@ -19,6 +20,7 @@ class App(ttk.Frame):
         ttk.Label(self.left, text="导航").pack(anchor="w")
         ttk.Button(self.left, text="首页", command=self.show_home).pack(fill="x", pady=2)
         ttk.Button(self.left, text="文档管理", command=self.show_documents).pack(fill="x", pady=2)
+        ttk.Button(self.left, text="备忘笔记", command=self.show_memos).pack(fill="x", pady=2)
 
         ttk.Label(self.left, text="分类").pack(anchor="w", pady=(12, 0))
         self.cat_tree = ttk.Treeview(self.left, show="tree", height=15)
@@ -31,6 +33,7 @@ class App(ttk.Frame):
 
         self.home_view = HomeView(self.content, self.conn)
         self.doc_view = DocumentsView(self.content, self.conn)
+        self.memo_view = MemosView(self.content, self.conn)
         self.current = None
         self.show_home()
 
@@ -49,6 +52,9 @@ class App(ttk.Frame):
 
     def show_documents(self):
         self._switch(self.doc_view)
+
+    def show_memos(self):
+        self._switch(self.memo_view)
 
     def _switch(self, view):
         if self.current is view:
