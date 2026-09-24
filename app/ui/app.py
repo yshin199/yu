@@ -40,7 +40,7 @@ class App(ttk.Frame):
 
         ttk.Separator(self.left).pack(fill="x", pady=8)
         ttk.Label(self.left, text="数据与备份", anchor="w").pack(anchor="w")
-        self.path_label = ttk.Label(self.left, text=str(DEFAULT_DB_PATH), foreground="#666",
+        self.path_label = ttk.Label(self.left, text=str(DEFAULT_DB_PATH), foreground="#9e9e9e",
                                     wraplength=170, justify="left")
         self.path_label.pack(anchor="w", pady=(2, 4))
         bkbtns = ttk.Frame(self.left)

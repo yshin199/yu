@@ -123,3 +123,13 @@ def test_select_range(root, db):
     # 反向拖动等价
     view._select_range(children[2], children[0])
     assert set(view.tree.selection()) == set(children)
+
+
+def test_dark_theme_builds(root, db):
+    from app.ui.theme import apply_theme
+    apply_theme(root)
+    classifier.seed_defaults(db)
+    app = App(root, db)
+    app.show_home()
+    root.update()
+    assert app.winfo_exists()

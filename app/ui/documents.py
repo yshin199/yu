@@ -29,7 +29,7 @@ class DocumentsView(ttk.Frame):
         self.cat_combo = ttk.Combobox(toolbar, state="readonly", width=12)
         self.cat_combo.pack(side="left")
         ttk.Button(toolbar, text="归类", command=self.assign_category).pack(side="left", padx=2)
-        self.filter_label = ttk.Label(toolbar, text="全部文件", foreground="#666")
+        self.filter_label = ttk.Label(toolbar, text="全部文件", foreground="#9e9e9e")
         self.filter_label.pack(side="left", padx=(12, 0))
 
         self.tree = ttk.Treeview(self, columns=("name", "type", "cat", "size"),
