@@ -73,3 +73,34 @@ def test_register_paths_into_selected_category(root, db, tmp_path):
     ids = [int(i) for i in view.tree.get_children()]
     assert len(ids) == 1
     assert files.get_file(db, ids[0]).category_id == cat.id
+
+
+def test_assign_ids_multiple(root, db):
+    from app import categories, files
+    cat = categories.add_category(db, "工作")
+    f1 = files.add_file(db, "a.txt", "/a.txt")
+    f2 = files.add_file(db, "b.txt", "/b.txt")
+    view = DocumentsView(root, db)
+    view._assign_ids([f1.id, f2.id], cat.id)
+    assert files.get_file(db, f1.id).category_id == cat.id
+    assert files.get_file(db, f2.id).category_id == cat.id
+
+
+def test_delete_ids_multiple(root, db):
+    from app import files
+    f1 = files.add_file(db, "a.txt", "/a.txt")
+    f2 = files.add_file(db, "b.txt", "/b.txt")
+    view = DocumentsView(root, db)
+    view._delete_ids([f1.id, f2.id])
+    assert files.get_file(db, f1.id) is None
+    assert files.get_file(db, f2.id) is None
+
+
+def test_auto_classify_ids(root, db):
+    from app import classifier, files
+    classifier.seed_defaults(db)
+    f = files.add_file(db, "报告.pdf", "/报告.pdf")
+    view = DocumentsView(root, db)
+    assigned, unmatched = view._auto_classify_ids([f.id])
+    assert assigned == 1 and unmatched == 0
+    assert files.get_file(db, f.id).category_id is not None

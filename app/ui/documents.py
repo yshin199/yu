@@ -32,7 +32,8 @@ class DocumentsView(ttk.Frame):
         self.filter_label = ttk.Label(toolbar, text="全部文件", foreground="#666")
         self.filter_label.pack(side="left", padx=(12, 0))
 
-        self.tree = ttk.Treeview(self, columns=("name", "type", "cat", "size"), show="headings")
+        self.tree = ttk.Treeview(self, columns=("name", "type", "cat", "size"),
+                                 show="headings", selectmode="extended")
         self.tree.heading("name", text="文件名")
         self.tree.heading("type", text="类型")
         self.tree.heading("cat", text="分类")
@@ -43,6 +44,14 @@ class DocumentsView(ttk.Frame):
         self.tree.column("size", width=90)
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<Double-1>", self.open_file)
+        self.tree.bind("<Button-3>", self._on_right_click)
+
+        self.menu = tk.Menu(self, tearoff=0)
+        self.cat_submenu = tk.Menu(self.menu, tearoff=0)
+        self.menu.add_cascade(label="手动分类", menu=self.cat_submenu)
+        self.menu.add_command(label="自动分类", command=self.auto_classify_selected)
+        self.menu.add_separator()
+        self.menu.add_command(label="删除", command=self.delete_selected)
 
     def set_category(self, category_id):
         self.category_id = category_id
@@ -72,6 +81,67 @@ class DocumentsView(ttk.Frame):
     def _selected_file_id(self):
         sel = self.tree.selection()
         return int(sel[0]) if sel else None
+
+    def _selected_file_ids(self):
+        return [int(i) for i in self.tree.selection()]
+
+    def _assign_ids(self, ids, category_id):
+        for fid in ids:
+            files.set_file_category(self.conn, fid, category_id)
+        self.refresh()
+
+    def _auto_classify_ids(self, ids):
+        assigned = 0
+        for fid in ids:
+            sid = classifier.suggest_category(self.conn, fid)
+            if sid is not None:
+                files.set_file_category(self.conn, fid, sid)
+                assigned += 1
+        self.refresh()
+        return assigned, len(ids) - assigned
+
+    def _delete_ids(self, ids):
+        for fid in ids:
+            files.delete_file_entry(self.conn, fid)
+        self.refresh()
+
+    # ---- 右键菜单 ----
+    def _on_right_click(self, event):
+        iid = self.tree.identify_row(event.y)
+        if iid and iid not in self.tree.selection():
+            self.tree.selection_set(iid)
+        self._rebuild_cat_submenu()
+        try:
+            self.menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.menu.grab_release()
+
+    def _rebuild_cat_submenu(self):
+        self.cat_submenu.delete(0, "end")
+        self.cat_submenu.add_command(label="未分类", command=lambda: self._assign_selected(None))
+        for c in categories.list_categories(self.conn):
+            self.cat_submenu.add_command(
+                label=c.name, command=lambda cid=c.id: self._assign_selected(cid))
+
+    def _assign_selected(self, category_id):
+        ids = self._selected_file_ids()
+        if ids:
+            self._assign_ids(ids, category_id)
+
+    def auto_classify_selected(self):
+        ids = self._selected_file_ids()
+        if not ids:
+            messagebox.showinfo("自动分类", "请先选中文件")
+            return
+        assigned, unmatched = self._auto_classify_ids(ids)
+        messagebox.showinfo("自动分类", f"已归类 {assigned} 个，{unmatched} 个无匹配规则")
+
+    def delete_selected(self):
+        ids = self._selected_file_ids()
+        if not ids:
+            return
+        if messagebox.askyesno("删除", f"确定删除 {len(ids)} 个文件的登记？\n（电脑里的真实文件不会被删除）"):
+            self._delete_ids(ids)
 
     def import_files(self):
         paths = filedialog.askopenfilenames(title="选择要登记的文件")
