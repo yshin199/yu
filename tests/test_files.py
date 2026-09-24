@@ -43,3 +43,10 @@ def test_delete_entry_keeps_file(db):
     f = add_file(db, "a.txt", "/a.txt")
     delete_file_entry(db, f.id)
     assert get_file(db, f.id) is None
+
+
+def test_add_file_stats_size(db, tmp_path):
+    p = tmp_path / "data.txt"
+    p.write_bytes(b"hello world")  # 11 bytes
+    f = add_file(db, "data.txt", p)
+    assert f.size == 11

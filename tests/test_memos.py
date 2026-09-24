@@ -1,5 +1,6 @@
 from app.memos import (add_memo, get_memo, set_memo_done, set_memo_pinned,
-                       set_memo_archived, delete_memo, list_memos, get_today_plans)
+                       set_memo_archived, delete_memo, list_memos, get_today_plans,
+                       set_memo_category)
 
 
 def test_add_memo_defaults(db):
@@ -41,3 +42,19 @@ def test_delete(db):
     m = add_memo(db, title="a")
     delete_memo(db, m.id)
     assert get_memo(db, m.id) is None
+
+
+def test_today_plans_excludes_done(db):
+    add_memo(db, title="买菜", memo_type="plan", plan_date="2026-09-24")
+    done = add_memo(db, title="交房租", memo_type="plan", plan_date="2026-09-24")
+    set_memo_done(db, done.id, True)
+    assert [m.title for m in get_today_plans(db, "2026-09-24")] == ["买菜"]
+    assert [m.title for m in get_today_plans(db, "2026-09-24", done=True)] == ["交房租"]
+
+
+def test_set_memo_category(db):
+    m = add_memo(db, title="a")
+    set_memo_category(db, m.id, 3)
+    assert get_memo(db, m.id).category_id == 3
+    set_memo_category(db, m.id, None)
+    assert get_memo(db, m.id).category_id is None

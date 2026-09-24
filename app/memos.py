@@ -85,8 +85,14 @@ def list_memos(conn, query=None, memo_type=None, archived=None, category_id=None
     return [_to(r) for r in conn.execute(sql, params).fetchall()]
 
 
-def get_today_plans(conn, date_iso):
+def get_today_plans(conn, date_iso, done=False):
     rows = conn.execute(
-        "SELECT * FROM memos WHERE memo_type='plan' AND plan_date=? AND archived=0 "
-        "ORDER BY done ASC, created_at ASC, id ASC", (date_iso,)).fetchall()
+        "SELECT * FROM memos WHERE memo_type='plan' AND plan_date=? AND archived=0 AND done=? "
+        "ORDER BY created_at ASC, id ASC", (date_iso, 1 if done else 0)).fetchall()
     return [_to(r) for r in rows]
+
+
+def set_memo_category(conn, memo_id, category_id):
+    conn.execute("UPDATE memos SET category_id=?, updated_at=? WHERE id=?",
+                 (category_id, _now(), memo_id))
+    conn.commit()

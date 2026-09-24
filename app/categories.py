@@ -61,6 +61,7 @@ def delete_category(conn, category_id):
     ph = ",".join("?" * len(ids))
     conn.execute(f"UPDATE files SET category_id=NULL WHERE category_id IN ({ph})", ids)
     conn.execute(f"UPDATE memos SET category_id=NULL WHERE category_id IN ({ph})", ids)
+    conn.execute(f"DELETE FROM rules WHERE target_category_id IN ({ph})", ids)
     conn.execute(f"DELETE FROM categories WHERE id IN ({ph})", ids)
     conn.commit()
 

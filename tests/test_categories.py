@@ -64,3 +64,12 @@ def test_build_tree(db):
     tree = build_tree(db)
     assert tree[0]["name"] == "工作"
     assert tree[0]["children"][0]["name"] == "合同"
+
+
+def test_delete_category_removes_rules(db):
+    work = add_category(db, "工作")
+    db.execute("INSERT INTO rules (kind, match_value, target_category_id) VALUES (?,?,?)",
+               ("keyword", "合同", work.id))
+    db.commit()
+    delete_category(db, work.id)
+    assert db.execute("SELECT COUNT(*) FROM rules").fetchone()[0] == 0

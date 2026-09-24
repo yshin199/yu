@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -19,10 +20,13 @@ def infer_type(file_name):
 
 
 def add_file(conn, file_name, original_path, size=0, category_id=None):
+    p = str(original_path)
+    if size == 0 and os.path.exists(p):
+        size = os.path.getsize(p)
     cur = conn.execute(
         "INSERT INTO files (file_name, original_path, file_type, category_id, size, created_at, status) "
         "VALUES (?,?,?,?,?,?,?)",
-        (file_name, str(original_path), infer_type(file_name), category_id, size, _now(), "indexed"))
+        (file_name, p, infer_type(file_name), category_id, size, _now(), "indexed"))
     conn.commit()
     return get_file(conn, cur.lastrowid)
 
